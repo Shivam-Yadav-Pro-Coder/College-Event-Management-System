@@ -1,0 +1,41 @@
+name: Deploy to EC2 using Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy on EC2
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd ~
+            if [ ! -d "College-Event-Management-System" ]; then
+              git clone https://github.com/Shivam-Yadav-Pro-Coder/College-Event-Management-System.git
+            fi
+
+            cd College-Event-Management-System
+            git pull origin main
+
+            docker stop college-event-container || true
+            docker rm college-event-container || true
+            docker rmi college-event-app || true
+
+            docker build -t college-event-app .
+            docker run -d -p 80:80 --name college-event-container college-event-app
+          EOF
+
