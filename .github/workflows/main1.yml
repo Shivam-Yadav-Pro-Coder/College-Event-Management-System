@@ -1,0 +1,43 @@
+name: CI/CD Deploy to EC2
+
+# Trigger workflow on push to main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Setup SSH to connect to EC2
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      # Step 3: Test SSH connection (optional but useful)
+      - name: Test SSH connection
+        run: |
+          echo "Testing SSH connection to EC2..."
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "echo 'SSH connection works!'"
+
+      # Step 4: Deploy application on EC2
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            echo "Deploy started..."
+            cd ~/College-Event-Management-System
+            git reset --hard
+            git pull origin main
+            docker build -t college-event-app .
+            docker stop college-event-container || true
+            docker rm college-event-container || true
+            docker run -d -p 80:80 --name college-event-container college-event-app
+            echo "Deploy finished!"
+          EOF
