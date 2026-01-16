@@ -15,7 +15,7 @@ jobs:
 
     - name: Setup SSH
       # Updated to latest stable version
-      uses: webfactory/ssh-agent@v0.8.2
+      uses: webfactory/ssh-agent@v0.8.1
       with:
         ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
